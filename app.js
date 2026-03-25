@@ -29,7 +29,6 @@ createApp({
     const showLeftNavHint = ref(false);
     const isFullscreen = ref(false);
     
-    // 防呆假變數：避免有殘留的 HTML 標籤呼叫而導致死機
     const isAnalyzingReceipt = ref(false); 
     
     const isUploadingReceipt = ref(false); 
@@ -217,7 +216,6 @@ createApp({
       reader.readAsDataURL(file);
     };
 
-    // 這裡是你原本寫的中文朗讀功能
     const playZhSpeech = (text) => {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
@@ -233,19 +231,6 @@ createApp({
         alert('您的瀏覽器不支援語音功能');
       }
     };
-
-    // 👇👇👇 請把這段補上去！這就是導致白畫面的真兇 👇👇👇
-    const playSpeech = (text) => {
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        const msg = new SpeechSynthesisUtterance(text);
-        // 這裡讓瀏覽器自動判斷外語發音
-        window.speechSynthesis.speak(msg);
-      } else {
-        alert('您的瀏覽器不支援語音功能');
-      }
-    };
-    // 👆👆👆 補到這裡 👆👆👆
 
     const checkNavScroll = () => {
       if (!navContainer.value) return;
@@ -294,6 +279,7 @@ createApp({
         try {
           const res = await callAPI({
             action: 'uploadReceipt',
+            spreadsheetId: spreadsheetId.value, // ✅ 修復：補上試算表 ID
             tripName: tripName.value,
             base64Image: base64String
           });
@@ -668,6 +654,24 @@ createApp({
       return 'https://' + 'translate.google.com/?hl=zh-TW&sl=zh-TW&tl=' + targetLang + '&op=translate';
     });
 
+    const playSpeech = (text) => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const msg = new SpeechSynthesisUtterance(text);
+        
+        // ✅ 修復：明確指定語言，避免手機瀏覽器唸不出來
+        if (isKorea.value) msg.lang = 'ko-KR';
+        else if (isJapan.value) msg.lang = 'ja-JP';
+        else if (isThailand.value) msg.lang = 'th-TH';
+        else if (isVietnam.value) msg.lang = 'vi-VN';
+        else if (isEnglish.value) msg.lang = 'en-US';
+
+        window.speechSynthesis.speak(msg);
+      } else {
+        alert('您的瀏覽器不支援語音功能');
+      }
+    };
+
     // 🚀 匯出所有變數與函數
     return {
       isLoggedIn, loginUser, loginPass, loginLoading, loginError, handleLogin, handleLogout, tripName,
@@ -681,7 +685,7 @@ createApp({
       currency, exchangeRate, calcInput, calcResult, settlement,
       isSaving, showExpenseModal, newExpense, handleReceiptUpload, submitExpense,
       aiCameraInput, aiMode, isAiThinking, triggerAiCamera, handleAiUpload, playZhSpeech,
-      isAnalyzingReceipt // 防呆變數匯出
+      isAnalyzingReceipt
     };
   }
 }).mount('#app');
