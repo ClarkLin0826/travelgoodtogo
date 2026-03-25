@@ -502,57 +502,76 @@
               <div v-show="activeTab === 'ai_guide'" class="py-8 space-y-8 print:pt-4 w-full">
                 
                 <div class="flex items-center gap-3 mb-6">
-                  <div class="p-3 bg-purple-100 text-purple-600 rounded-xl"><i data-lucide="sparkles" class="w-6 h-6"></i></div>
+                  <div class="p-3 bg-purple-100 text-purple-600 rounded-xl relative">
+                    <i data-lucide="sparkles" class="w-6 h-6"></i>
+                    <span v-if="isPremium" class="absolute -top-2 -right-2 bg-gradient-to-r from-amber-400 to-orange-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-sm border border-white">PRO</span>
+                  </div>
                   <div>
                     <h2 class="text-2xl font-bold text-slate-800">隨身 AI 導遊</h2>
                     <p class="text-sm text-slate-500 mt-1">看不懂菜單或告示牌？直接拍給 AI 看！</p>
                   </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4 print:hidden">
-                  <button @click="triggerAiCamera('menu')" class="bg-white border-2 border-orange-100 hover:border-orange-300 hover:bg-orange-50 rounded-2xl p-5 flex flex-col items-center justify-center gap-3 transition-all shadow-sm">
-                    <div class="w-12 h-12 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center"><i data-lucide="utensils" class="w-6 h-6"></i></div>
-                    <div class="font-bold text-slate-800 text-center">拍菜單解密<br><span class="text-xs font-normal text-slate-500">美食顧問</span></div>
-                  </button>
-                  <button @click="triggerAiCamera('landmark')" class="bg-white border-2 border-blue-100 hover:border-blue-300 hover:bg-blue-50 rounded-2xl p-5 flex flex-col items-center justify-center gap-3 transition-all shadow-sm">
-                    <div class="w-12 h-12 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center"><i data-lucide="landmark" class="w-6 h-6"></i></div>
-                    <div class="font-bold text-slate-800 text-center">拍景點聽故事<br><span class="text-xs font-normal text-slate-500">專屬導遊</span></div>
+                <div v-if="!isPremium" class="bg-white rounded-3xl shadow-sm border border-slate-200 p-8 text-center flex flex-col items-center justify-center my-10 relative overflow-hidden">
+                  <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-300 to-orange-500"></div>
+                  <div class="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mb-5 border-4 border-white shadow-md z-10">
+                    <i data-lucide="lock" class="w-8 h-8 text-amber-500"></i>
+                  </div>
+                  <h3 class="text-xl font-black text-slate-800 mb-2">專屬進階功能</h3>
+                  <p class="text-slate-500 text-sm mb-6 leading-relaxed">隨身 AI 導遊為 Premium 帳號專屬黑科技。<br>請升級您的帳號，解鎖即時菜單翻譯與景點故事解說！</p>
+                  <button @click="activeTab = 'home'" class="bg-slate-900 text-white font-bold py-3 px-8 rounded-xl shadow-lg hover:bg-slate-800 transition-all flex items-center gap-2">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i> 返回首頁
                   </button>
                 </div>
 
-                <div v-if="data.aiRecords && data.aiRecords.length > 0" class="mt-8">
-                  <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2"><i data-lucide="history" class="w-5 h-5 text-purple-500"></i> 歷史解說紀錄</h3>
-                  <div class="space-y-4">
-                    <div v-for="(record, idx) in data.aiRecords.slice().reverse()" :key="idx" class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 transition-all hover:shadow-md">
-                       <div class="flex justify-between items-center mb-3 border-b border-slate-50 pb-2">
-                         <span class="text-xs font-bold px-3 py-1 rounded-full shadow-sm" :class="record['模式'] === 'menu' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'">
-                           {{ record['模式'] === 'menu' ? '🍔 菜單解密' : '🏛️ 景點故事' }}
-                         </span>
-                         <span class="text-xs font-medium text-slate-400 flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> {{ record['時間'] }}</span>
-                       </div>
-                       <p class="text-slate-700 whitespace-pre-line text-base leading-relaxed break-words">{{ record['內容'] }}</p>
-                       <div class="mt-4 pt-3 border-t border-slate-50 flex justify-end">
-                         <button @click="playZhSpeech(record['內容'])" class="bg-purple-50 px-4 py-2 text-purple-700 font-bold text-sm flex items-center gap-2 rounded-xl hover:bg-purple-100 hover:shadow-sm transition-all">
-                           <i data-lucide="volume-2" class="w-4 h-4"></i> 重新聆聽
-                         </button>
-                       </div>
+                <div v-else>
+                  <div class="grid grid-cols-2 gap-4 print:hidden">
+                    <button @click="triggerAiCamera('menu')" class="bg-white border-2 border-orange-100 hover:border-orange-300 hover:bg-orange-50 rounded-2xl p-5 flex flex-col items-center justify-center gap-3 transition-all shadow-sm relative overflow-hidden group">
+                      <div class="absolute inset-0 bg-gradient-to-br from-orange-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                      <div class="w-12 h-12 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center relative z-10"><i data-lucide="utensils" class="w-6 h-6"></i></div>
+                      <div class="font-bold text-slate-800 text-center relative z-10">拍菜單解密<br><span class="text-xs font-normal text-slate-500">美食顧問</span></div>
+                    </button>
+                    <button @click="triggerAiCamera('landmark')" class="bg-white border-2 border-blue-100 hover:border-blue-300 hover:bg-blue-50 rounded-2xl p-5 flex flex-col items-center justify-center gap-3 transition-all shadow-sm relative overflow-hidden group">
+                      <div class="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                      <div class="w-12 h-12 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center relative z-10"><i data-lucide="landmark" class="w-6 h-6"></i></div>
+                      <div class="font-bold text-slate-800 text-center relative z-10">拍景點聽故事<br><span class="text-xs font-normal text-slate-500">專屬導遊</span></div>
+                    </button>
+                  </div>
+
+                  <div v-if="data.aiRecords && data.aiRecords.length > 0" class="mt-8">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2"><i data-lucide="history" class="w-5 h-5 text-purple-500"></i> 歷史解說紀錄</h3>
+                    <div class="space-y-4">
+                      <div v-for="(record, idx) in data.aiRecords.slice().reverse()" :key="idx" class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 transition-all hover:shadow-md">
+                         <div class="flex justify-between items-center mb-3 border-b border-slate-50 pb-2">
+                           <span class="text-xs font-bold px-3 py-1 rounded-full shadow-sm" :class="record['模式'] === 'menu' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'">
+                             {{ record['模式'] === 'menu' ? '🍔 菜單解密' : '🏛️ 景點故事' }}
+                           </span>
+                           <span class="text-xs font-medium text-slate-400 flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> {{ record['時間'] }}</span>
+                         </div>
+                         <p class="text-slate-700 whitespace-pre-line text-base leading-relaxed break-words">{{ record['內容'] }}</p>
+                         <div class="mt-4 pt-3 border-t border-slate-50 flex justify-end">
+                           <button @click="playZhSpeech(record['內容'])" class="bg-purple-50 px-4 py-2 text-purple-700 font-bold text-sm flex items-center gap-2 rounded-xl hover:bg-purple-100 hover:shadow-sm transition-all">
+                             <i data-lucide="volume-2" class="w-4 h-4"></i> 重新聆聽
+                           </button>
+                         </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-                
-                <div v-if="(!data.aiRecords || data.aiRecords.length === 0) && !isAiThinking" class="text-center py-12 text-slate-400">
-                  <i data-lucide="camera" class="w-12 h-12 mx-auto mb-3 opacity-20"></i>
-                  <p>目前還沒有掃描紀錄喔！</p>
-                </div>
-
-                <div v-if="isAiThinking" class="fixed inset-0 z-[200] bg-slate-900/90 backdrop-blur-sm flex flex-col items-center justify-center p-4 print:hidden">
-                  <div class="relative w-24 h-24 mx-auto mb-6">
-                    <div class="absolute inset-0 border-4 border-slate-700 rounded-full"></div>
-                    <div class="absolute inset-0 border-t-4 border-purple-500 rounded-full animate-spin"></div>
-                    <i data-lucide="brain" class="w-10 h-10 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-purple-400 animate-pulse"></i>
+                  
+                  <div v-if="(!data.aiRecords || data.aiRecords.length === 0) && !isAiThinking" class="text-center py-12 text-slate-400">
+                    <i data-lucide="camera" class="w-12 h-12 mx-auto mb-3 opacity-20"></i>
+                    <p>目前還沒有掃描紀錄喔！</p>
                   </div>
-                  <h3 class="text-2xl font-bold text-white mb-3">AI 導遊思考中...</h3>
-                  <p class="text-slate-400 text-sm animate-pulse">正在為您翻譯與整理精華，請稍候</p>
+
+                  <div v-if="isAiThinking" class="fixed inset-0 z-[200] bg-slate-900/90 backdrop-blur-sm flex flex-col items-center justify-center p-4 print:hidden">
+                    <div class="relative w-24 h-24 mx-auto mb-6">
+                      <div class="absolute inset-0 border-4 border-slate-700 rounded-full"></div>
+                      <div class="absolute inset-0 border-t-4 border-purple-500 rounded-full animate-spin"></div>
+                      <i data-lucide="brain" class="w-10 h-10 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-purple-400 animate-pulse"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white mb-3">AI 導遊思考中...</h3>
+                    <p class="text-slate-400 text-sm animate-pulse">正在為您翻譯與整理精華，請稍候</p>
+                  </div>
                 </div>
 
               </div>

@@ -9,6 +9,10 @@ createApp({
     const loginLoading = ref(false);
     const loginError = ref('');
     
+    // 💡 權限管理 (free 預設, premium 解鎖 AI)
+    const userPermission = ref('free'); 
+    const isPremium = computed(() => userPermission.value === 'premium');
+    
     // 行程選擇器相關狀態
     const showTripSelector = ref(false);
     const availableTrips = ref([]);
@@ -51,7 +55,7 @@ createApp({
       { id: 'ai_guide', label: 'AI 導遊', icon: 'sparkles' }
     ];
 
-    // 💡 修復 Icon 消失問題：加入微小延遲確保 Vue DOM 已更新
+    // 修復 Icon 消失問題：加入微小延遲確保 Vue DOM 已更新
     const renderIcons = () => { 
       nextTick(() => { 
         setTimeout(() => {
@@ -69,7 +73,7 @@ createApp({
       return await response.json();
     };
 
-    // 🔐 登入邏輯 (支援多行程、儲存 7 天記憶)
+    // 🔐 登入邏輯 (支援多行程、儲存 7 天記憶與權限)
     const handleLogin = async () => {
       if (!loginUser.value || !loginPass.value) {
         loginError.value = "請輸入帳號與密碼";
@@ -80,8 +84,10 @@ createApp({
       try {
         const res = await callAPI({ action: 'login', user: loginUser.value, pass: loginPass.value });
         if (res.success) {
-          // 💡 寫入 7 天記憶時間戳記
+          // 💡 寫入 7 天記憶時間戳記與權限設定
           localStorage.setItem('travel_login_time', Date.now().toString());
+          localStorage.setItem('travel_permission', res.permission || 'free'); 
+          userPermission.value = res.permission || 'free'; 
 
           if (res.trips && res.trips.length > 0) {
             availableTrips.value = res.trips;
@@ -129,14 +135,16 @@ createApp({
       }
     };
 
-    // 🚪 徹底登出邏輯 (清空所有記憶)
+    // 🚪 徹底登出邏輯 (清空所有記憶與權限)
     const handleLogout = () => {
       localStorage.removeItem('travel_sid');
       localStorage.removeItem('travel_name');
       localStorage.removeItem('travel_login_time');
       localStorage.removeItem('travel_trips');
+      localStorage.removeItem('travel_permission'); // 💡 清除權限
       isLoggedIn.value = false;
       showTripSelector.value = false;
+      userPermission.value = 'free'; // 💡 重設為免費版
       availableTrips.value = [];
       spreadsheetId.value = '';
       tripName.value = '';
@@ -410,8 +418,8 @@ createApp({
     
     watch(activeItineraryDay, renderIcons);
 
-    // 💡 當登入狀態改變時，確保圖示重新渲染
-    watch([isLoggedIn, showTripSelector], () => {
+    // 💡 當登入狀態或畫面改變時，重新繪製 Icon
+    watch([isLoggedIn, showTripSelector, userPermission], () => {
       renderIcons();
     });
 
@@ -423,15 +431,21 @@ createApp({
       const savedSid = localStorage.getItem('travel_sid');
       const savedName = localStorage.getItem('travel_name');
       const savedTrips = localStorage.getItem('travel_trips');
+      const savedPermission = localStorage.getItem('travel_permission');
 
-      // 💡 檢查是否超過 7 天 (7天 = 604,800,000 毫秒)
+      // 💡 檢查是否超過 7 天 (604,800,000 毫秒)
       if (savedTime && (Date.now() - parseInt(savedTime)) > 604800000) {
-        handleLogout(); // 登入過期，清除記憶
+        handleLogout(); // 過期清除記憶
         return;
       }
 
       if (savedTrips) {
         try { availableTrips.value = JSON.parse(savedTrips); } catch(e) {}
+      }
+
+      // 💡 讀取使用者的付費狀態
+      if (savedPermission) {
+        userPermission.value = savedPermission;
       }
 
       // 啟動時檢查 LocalStorage 是否已經有登入紀錄
@@ -675,9 +689,11 @@ createApp({
       return 'https://' + 'translate.google.com/?hl=zh-TW&sl=zh-TW&tl=' + targetLang + '&op=translate';
     });
 
+    // 🚀 匯出所有變數與函數
     return {
       isLoggedIn, loginUser, loginPass, loginLoading, loginError, handleLogin, handleLogout, tripName,
       showTripSelector, availableTrips, selectTrip, handleSwitchTrip,
+      userPermission, isPremium, // 💡 將付費權限拋給 HTML
       loading, error, data, activeTab, tabs, basicInfo, coverImage,
       uniqueAddresses, copiedIndex, copyToClipboard, countdownDays,
       itineraryDays, activeItineraryDay, groupedItinerary, currentDayDirectionsUrl,
