@@ -2,15 +2,21 @@ const { createApp, ref, computed, onMounted, nextTick, watch } = Vue;
 
 createApp({
   setup() {
-    // 🔐 登入狀態管理
+    // 🔐 登入狀態與行程選擇管理
     const isLoggedIn = ref(false);
     const loginUser = ref('');
     const loginPass = ref('');
     const loginLoading = ref(false);
     const loginError = ref('');
+    
+    // 行程選擇器相關狀態
+    const showTripSelector = ref(false);
+    const availableTrips = ref([]);
+    
     const spreadsheetId = ref('');
     const tripName = ref('');
 
+    // 全局狀態管理
     const loading = ref(false);
     const error = ref(null);
     const data = ref({ basicInfo: [], flights: [], hotels: [], tickets: [], itinerary: [], expenses: [], notes: [], aiRecords: [] });
@@ -56,7 +62,7 @@ createApp({
       return await response.json();
     };
 
-    // 🔐 登入邏輯
+    // 🔐 登入邏輯 (支援多行程判斷)
     const handleLogin = async () => {
       if (!loginUser.value || !loginPass.value) {
         loginError.value = "請輸入帳號與密碼";
@@ -67,12 +73,17 @@ createApp({
       try {
         const res = await callAPI({ action: 'login', user: loginUser.value, pass: loginPass.value });
         if (res.success) {
-          spreadsheetId.value = res.spreadsheetId;
-          tripName.value = res.tripName;
-          localStorage.setItem('travel_sid', res.spreadsheetId);
-          localStorage.setItem('travel_name', res.tripName);
-          isLoggedIn.value = true;
-          fetchItineraryData();
+          if (res.trips && res.trips.length === 1) {
+            // 只有一個行程，直接進入
+            selectTrip(res.trips[0]);
+          } else if (res.trips && res.trips.length > 1) {
+            // 有多個行程，打開選擇器介面
+            availableTrips.value = res.trips;
+            showTripSelector.value = true;
+          } else {
+             // 舊版 API 相容性 (如果後端沒回傳 trips 陣列)
+             selectTrip({ spreadsheetId: res.spreadsheetId, tripName: res.tripName });
+          }
         } else {
           loginError.value = res.error || "登入失敗，請檢查帳號密碼";
         }
@@ -82,11 +93,24 @@ createApp({
       loginLoading.value = false;
     };
 
+    // 🎯 選擇行程邏輯
+    const selectTrip = (trip) => {
+      spreadsheetId.value = trip.spreadsheetId;
+      tripName.value = trip.tripName;
+      localStorage.setItem('travel_sid', trip.spreadsheetId);
+      localStorage.setItem('travel_name', trip.tripName);
+      showTripSelector.value = false;
+      isLoggedIn.value = true;
+      fetchItineraryData();
+    };
+
     // 🚪 登出邏輯
     const handleLogout = () => {
       localStorage.removeItem('travel_sid');
       localStorage.removeItem('travel_name');
       isLoggedIn.value = false;
+      showTripSelector.value = false;
+      availableTrips.value = [];
       spreadsheetId.value = '';
       tripName.value = '';
       loginUser.value = '';
@@ -608,8 +632,10 @@ createApp({
       return 'https://' + 'translate.google.com/?hl=zh-TW&sl=zh-TW&tl=' + targetLang + '&op=translate';
     });
 
+    // 🚀 回傳所有綁定到畫面的變數與函數 (加上了 showTripSelector, availableTrips, selectTrip)
     return {
       isLoggedIn, loginUser, loginPass, loginLoading, loginError, handleLogin, handleLogout, tripName,
+      showTripSelector, availableTrips, selectTrip,
       loading, error, data, activeTab, tabs, basicInfo, coverImage,
       uniqueAddresses, copiedIndex, copyToClipboard, countdownDays,
       itineraryDays, activeItineraryDay, groupedItinerary, currentDayDirectionsUrl,

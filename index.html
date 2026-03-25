@@ -10,6 +10,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#0f172a">
 
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3180/3180118.png">
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -22,34 +25,51 @@
     <div v-if="!isLoggedIn" class="min-h-screen bg-slate-900 flex flex-col justify-center items-center p-4 relative overflow-hidden">
       <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl"></div>
       <div class="absolute top-1/4 right-1/4 w-64 h-64 bg-emerald-500/20 rounded-full blur-3xl"></div>
-
+      
       <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative z-10 overflow-hidden border border-slate-200/50">
         <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-purple-500 via-indigo-500 to-emerald-500"></div>
-        <div class="text-center mb-8">
-          <div class="w-20 h-20 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-sm border border-slate-100">
-            <i data-lucide="plane-takeoff" class="w-10 h-10 text-indigo-500"></i>
-          </div>
-          <h2 class="text-3xl font-black text-slate-800 tracking-tight">我的專屬導遊</h2>
-          <p class="text-slate-500 text-sm mt-2 font-medium">請輸入您的帳號密碼登入</p>
-        </div>
         
-        <div class="space-y-5">
-          <div>
-            <label class="block text-sm font-bold text-slate-700 mb-1.5 ml-1">帳號</label>
-            <input type="text" v-model="loginUser" @keyup.enter="handleLogin" placeholder="請輸入帳號" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all text-slate-800 font-medium">
-          </div>
-          <div>
-            <label class="block text-sm font-bold text-slate-700 mb-1.5 ml-1">密碼</label>
-            <input type="password" v-model="loginPass" @keyup.enter="handleLogin" placeholder="請輸入密碼" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all text-slate-800 font-medium">
+        <div v-if="!showTripSelector">
+          <div class="text-center mb-8">
+            <div class="w-20 h-20 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-sm border border-slate-100">
+              <i data-lucide="plane-takeoff" class="w-10 h-10 text-indigo-500"></i>
+            </div>
+            <h2 class="text-3xl font-black text-slate-800 tracking-tight">我的專屬導遊</h2>
+            <p class="text-slate-500 text-sm mt-2 font-medium">請輸入您的帳號密碼登入</p>
           </div>
           
-          <div v-if="loginError" class="text-rose-500 text-sm font-bold text-center bg-rose-50 py-2.5 rounded-xl border border-rose-100 animate-pulse">{{ loginError }}</div>
-          
-          <button @click="handleLogin" :disabled="loginLoading" class="w-full py-4 bg-slate-900 text-white rounded-xl font-bold mt-2 hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 flex justify-center items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed active:scale-[0.98]">
-            <i v-if="loginLoading" data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>
-            <span>{{ loginLoading ? '登入驗證中...' : '登入系統' }}</span>
-          </button>
+          <div class="space-y-5">
+            <div>
+              <label class="block text-sm font-bold text-slate-700 mb-1.5 ml-1">帳號</label>
+              <input type="text" v-model="loginUser" @keyup.enter="handleLogin" placeholder="請輸入帳號" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all text-slate-800 font-medium">
+            </div>
+            <div>
+              <label class="block text-sm font-bold text-slate-700 mb-1.5 ml-1">密碼</label>
+              <input type="password" v-model="loginPass" @keyup.enter="handleLogin" placeholder="請輸入密碼" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all text-slate-800 font-medium">
+            </div>
+            <div v-if="loginError" class="text-rose-500 text-sm font-bold text-center bg-rose-50 py-2.5 rounded-xl border border-rose-100 animate-pulse">{{ loginError }}</div>
+            
+            <button @click="handleLogin" :disabled="loginLoading" class="w-full py-4 bg-slate-900 text-white rounded-xl font-bold mt-2 hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 flex justify-center items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed active:scale-[0.98]">
+              <i v-if="loginLoading" data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>
+              <span>{{ loginLoading ? '登入驗證中...' : '登入系統' }}</span>
+            </button>
+          </div>
         </div>
+
+        <div v-else>
+          <div class="text-center mb-6">
+            <h2 class="text-2xl font-black text-slate-800 tracking-tight">請選擇行程</h2>
+            <p class="text-slate-500 text-sm mt-2 font-medium">您的帳號擁有多筆旅遊計畫</p>
+          </div>
+          <div class="space-y-3 max-h-64 overflow-y-auto custom-scrollbar pr-1">
+            <button v-for="trip in availableTrips" :key="trip.spreadsheetId" @click="selectTrip(trip)" class="w-full bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 p-4 rounded-xl flex items-center justify-between group transition-all text-left">
+              <span class="font-bold text-slate-700 group-hover:text-indigo-700">{{ trip.tripName }}</span>
+              <i data-lucide="chevron-right" class="w-5 h-5 text-slate-400 group-hover:text-indigo-500 transition-transform group-hover:translate-x-1"></i>
+            </button>
+          </div>
+          <button @click="handleLogout" class="w-full mt-4 py-3 text-slate-500 hover:text-slate-800 font-bold text-sm">返回重新登入</button>
+        </div>
+
       </div>
       <div class="text-slate-500 text-xs mt-8 text-center relative z-10 font-medium">
         動態旅遊 SaaS 平台 v2.0<br>Powered by Gemini Vision AI
@@ -126,7 +146,6 @@
       
             <button v-show="showLeftNavHint" @click="scrollNav('left')" class="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-white via-white/90 to-transparent flex items-center justify-start pl-1 z-10 text-slate-400 hover:text-slate-700 cursor-pointer focus:outline-none"><i data-lucide="chevron-left" class="w-6 h-6 animate-pulse drop-shadow-sm"></i></button>
             <button v-show="showNavHint" @click="scrollNav('right')" class="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white via-white/90 to-transparent flex items-center justify-end pr-1 z-10 text-slate-400 hover:text-slate-700 cursor-pointer focus:outline-none"><i data-lucide="chevron-right" class="w-6 h-6 animate-pulse drop-shadow-sm"></i></button>
-      
           </div>
         </nav>
 
@@ -150,6 +169,14 @@
                     </div>
                   </div>
                 </div>
+
+                <div class="flex justify-end mb-4 print:hidden md:hidden">
+                  <button @click="handleLogout" class="flex items-center gap-2 bg-white border border-slate-200 shadow-sm px-4 py-2 rounded-full text-slate-600 hover:text-rose-500 hover:border-rose-200 transition-colors text-sm font-bold">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                    <span>切換行程 / 登出</span>
+                  </button>
+                </div>
+
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 print:hidden">
                   <div class="bg-white rounded-2xl p-4 md:p-5 shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center gap-1 w-full overflow-hidden">
                     <div class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center mb-1 shrink-0"><i data-lucide="hourglass" class="w-5 h-5"></i></div>
@@ -161,15 +188,10 @@
                     <div class="font-bold text-slate-800 text-sm md:text-base leading-tight truncate w-full"><span v-if="weatherInfo.temp !== null">{{ weatherInfo.temp }}°C </span><span>{{ weatherInfo.desc }}</span></div>
                     <div class="text-[11px] md:text-xs text-slate-400">點擊查看預報</div>
                   </a>
-                  <button @click="handleLogout" class="bg-rose-50 hover:bg-rose-100 transition-colors rounded-2xl p-4 md:p-5 shadow-sm border border-rose-100 flex flex-col items-center justify-center text-center gap-1 group cursor-pointer w-full overflow-hidden md:hidden">
-                    <div class="w-10 h-10 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform shrink-0"><i data-lucide="log-out" class="w-5 h-5"></i></div>
-                    <div class="font-bold text-slate-800 text-sm leading-tight truncate w-full">登出系統</div>
-                    <div class="text-[11px] text-slate-400">切換其他行程</div>
-                  </button>
-                  <button @click="toggleFullscreen" class="hidden md:flex bg-slate-900 hover:bg-slate-800 transition-colors rounded-2xl p-5 shadow-sm border border-slate-800 flex-col items-center justify-center text-center gap-1 group cursor-pointer w-full overflow-hidden">
+                  <button @click="toggleFullscreen" class="bg-slate-900 hover:bg-slate-800 transition-colors rounded-2xl p-4 md:p-5 shadow-sm border border-slate-800 flex flex-col items-center justify-center text-center gap-1 group cursor-pointer w-full overflow-hidden">
                     <div class="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center mb-1 group-hover:scale-110 transition-transform shrink-0"><i :data-lucide="isFullscreen ? 'minimize' : 'maximize'" class="w-5 h-5"></i></div>
-                    <div class="font-bold text-white text-base leading-tight truncate w-full">{{ isFullscreen ? '退出全螢幕' : '全螢幕模式' }}</div>
-                    <div class="text-xs text-slate-400">隱藏網址列</div>
+                    <div class="font-bold text-white text-sm md:text-base leading-tight truncate w-full">{{ isFullscreen ? '退出全螢幕' : '全螢幕模式' }}</div>
+                    <div class="text-[11px] md:text-xs text-slate-400">隱藏網址列</div>
                   </button>
                   <button @click="printPage" class="bg-white hover:bg-slate-50 transition-colors rounded-2xl p-4 md:p-5 shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center gap-1 group cursor-pointer w-full overflow-hidden">
                     <div class="w-10 h-10 rounded-full bg-slate-50 text-slate-600 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform shrink-0"><i data-lucide="printer" class="w-5 h-5"></i></div>
@@ -177,6 +199,7 @@
                     <div class="text-[11px] md:text-xs text-slate-400">列印紙本備用</div>
                   </button>
                 </div>
+                
                 <div v-if="uniqueAddresses.length > 0" class="max-w-3xl mx-auto w-full bg-slate-900 rounded-2xl p-6 text-white shadow-xl break-inside-avoid">
                   <div class="flex items-center gap-3 mb-6">
                     <div class="p-3 bg-white/10 print:bg-slate-200 print:text-slate-700 text-white rounded-xl"><i data-lucide="car" class="w-6 h-6"></i></div>
@@ -316,36 +339,11 @@
                       </div>
                     </div>
                   </div>
-                  <div class="hidden print:block space-y-12">
-                    <div v-for="day in itineraryDays" :key="'print-'+day" class="break-inside-avoid mb-12">
-                      <h3 class="text-xl font-bold text-slate-800 mb-6 pb-2 border-b-2 border-purple-200">{{ day }} 行程</h3>
-                      <div class="relative pl-4 py-2">
-                        <div class="absolute left-[7px] top-0 bottom-0 w-0.5 bg-slate-200"></div>
-                        <div class="space-y-6">
-                          <div v-for="(item, idx) in groupedItinerary[day]" :key="idx" class="relative pl-8 break-inside-avoid">
-                            <div class="absolute left-[-5px] top-1.5 w-4 h-4 rounded-full bg-purple-500 border-4 border-white"></div>
-                            <div class="bg-white rounded-2xl p-5 border border-slate-200 w-full overflow-hidden">
-                              <div class="flex items-start gap-4 w-full">
-                                <div class="shrink-0 pt-1"><span class="inline-block px-3 py-1 bg-slate-100 text-slate-700 font-bold rounded-lg">{{ item['時間'] }}</span></div>
-                                <div class="flex-grow space-y-2 min-w-0 w-full">
-                                  <h4 class="text-lg font-bold text-slate-800 break-words">{{ item['景點/活動名稱'] }}</h4>
-                                  <div v-if="item['地址']" class="flex items-start gap-2 text-slate-600 text-sm w-full"><i data-lucide="map-pin" class="w-3.5 h-3.5 shrink-0 mt-0.5 text-slate-400"></i><span class="break-words break-all w-full">{{ item['地址'] }}</span></div>
-                                  <div v-if="item['備註說明']" class="text-sm text-slate-600 mt-2 bg-slate-50 p-2 rounded-lg break-words break-all w-full">{{ item['備註說明'] }}</div>
-                                </div>
-                                <div v-if="item['圖片網址']" class="shrink-0 w-32 h-24 rounded-xl overflow-hidden bg-slate-100"><img :src="item['圖片網址']" class="w-full h-full object-cover" referrerpolicy="no-referrer"></div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
                 </template>
               </div>
             </Transition>
 
             <input type="file" accept="image/*" capture="environment" ref="cameraInput" @change="handleReceiptUpload" class="hidden">
-
             <Transition name="tab">
               <div v-show="activeTab === 'expenses'" class="py-8 space-y-8 print:pt-4 w-full">
                 <div class="flex items-center justify-between mb-6">
