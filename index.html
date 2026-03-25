@@ -232,7 +232,7 @@
                     <div v-for="(item, idx) in uniqueAddresses" :key="idx" class="bg-white/5 print:bg-slate-50 border border-white/10 print:border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-white/10 transition-colors break-inside-avoid">
                       <div class="flex-grow w-full overflow-hidden">
                         <div class="flex items-center gap-2 mb-1 w-full">
-                          <span :class="['shrink-0 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full', item.type === 'hotel' ? 'bg-emerald-500/20 text-emerald-300 print:bg-emerald-100 print:text-emerald-700' : 'bg-purple-500/20 text-purple-300 print:bg-purple-100 print:text-purple-700']">{{ item.type === 'hotel' ? '住宿' : '景點' }}</span>
+                          <span :class="['shrink-0 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full', item.type === 'hotel' ? '住宿' : '景點' }}</span>
                           <h3 class="font-bold text-slate-200 print:text-slate-800 truncate w-full">{{ item.name }}</h3>
                         </div>
                         <div class="flex items-start gap-2 text-slate-400 print:text-slate-600 text-sm w-full">
@@ -616,7 +616,7 @@
     </div>
   </div>
 
-  <script src="./config.js?v=2" defer></script>
-  <script src="./app.js?v=2" defer></script>
+  <script src="./config.js?v=3" defer></script>
+  <script src="./app.js?v=3" defer></script>
 </body>
 </html>

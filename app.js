@@ -2,25 +2,21 @@ const { createApp, ref, computed, onMounted, nextTick, watch } = Vue;
 
 createApp({
   setup() {
-    // 🔐 登入狀態與行程選擇管理
     const isLoggedIn = ref(false);
     const loginUser = ref('');
     const loginPass = ref('');
     const loginLoading = ref(false);
     const loginError = ref('');
     
-    // 💡 權限管理 (free 預設, premium 解鎖 AI)
     const userPermission = ref('free'); 
     const isPremium = computed(() => userPermission.value === 'premium');
     
-    // 行程選擇器相關狀態
     const showTripSelector = ref(false);
     const availableTrips = ref([]);
     
     const spreadsheetId = ref('');
     const tripName = ref('');
 
-    // 全局狀態管理
     const loading = ref(false);
     const error = ref(null);
     const data = ref({ basicInfo: [], flights: [], hotels: [], tickets: [], itinerary: [], expenses: [], notes: [], aiRecords: [] });
@@ -33,11 +29,12 @@ createApp({
     const showLeftNavHint = ref(false);
     const isFullscreen = ref(false);
     
-    // 💡 記帳相關狀態更新
-    const isUploadingReceipt = ref(false); // 改為上傳照片狀態
+    // 防呆假變數：避免有殘留的 HTML 標籤呼叫而導致死機
+    const isAnalyzingReceipt = ref(false); 
+    
+    const isUploadingReceipt = ref(false); 
     const isSaving = ref(false);
     const showExpenseModal = ref(false);
-    // split 改成陣列形式以支援複選，新增 receiptUrl
     const newExpense = ref({ date: '', item: '', amount: '', currency: '', payer: '', split: [], receiptUrl: '' });
 
     const aiCameraInput = ref(null);
@@ -57,7 +54,6 @@ createApp({
       { id: 'ai_guide', label: 'AI 導遊', icon: 'sparkles' }
     ];
 
-    // 修復 Icon 消失問題：加入微小延遲確保 Vue DOM 已更新
     const renderIcons = () => { 
       nextTick(() => { 
         setTimeout(() => {
@@ -66,7 +62,6 @@ createApp({
       }); 
     };
 
-    // 🚀 共用 Fetch API 呼叫函數
     const callAPI = async (payload) => {
       const response = await fetch(GAS_API_URL, {
         method: "POST",
@@ -75,7 +70,6 @@ createApp({
       return await response.json();
     };
 
-    // 🔐 登入邏輯
     const handleLogin = async () => {
       if (!loginUser.value || !loginPass.value) {
         loginError.value = "請輸入帳號與密碼";
@@ -174,7 +168,6 @@ createApp({
       aiCameraInput.value.click();
     };
 
-    // 🤖 AI 導遊照片上傳與 API 呼叫
     const handleAiUpload = (event) => {
       const file = event.target.files[0];
       if (!file) return;
@@ -266,19 +259,16 @@ createApp({
       }
     };
 
-    // 💡 基本資訊計算屬性：抓取貨幣、匯率與出遊名單
     const basicInfo = computed(() => data.value.basicInfo && data.value.basicInfo[0] ? data.value.basicInfo[0] : {});
     const currency = computed(() => basicInfo.value['當地貨幣'] || '外幣');
     const exchangeRate = computed(() => Number(basicInfo.value['基準匯率(對台幣)']) || 1);
 
-    // 💡 自動解析同行名單 (支援全形半形逗號切割)
     const travelMates = computed(() => {
       const namesStr = basicInfo.value['同行名單(用逗號分隔)'];
       if (!namesStr) return [];
       return namesStr.split(/[,，]/).map(n => n.trim()).filter(n => n);
     });
 
-    // 📸 拍照上傳收據 (取代舊的 AI 辨識)
     const handleReceiptUpload = (event) => {
       const file = event.target.files[0];
       if (!file) return;
@@ -296,15 +286,14 @@ createApp({
           
           isUploadingReceipt.value = false;
           if (res.success) {
-            // 💡 上傳成功，自動帶入日期、幣別與分攤對象預設值
             const today = new Date();
             newExpense.value = {
               date: today.getFullYear() + '/' + String(today.getMonth()+1).padStart(2,'0') + '/' + String(today.getDate()).padStart(2,'0'),
               item: '',
               amount: '',
               currency: currency.value,
-              payer: travelMates.value.length > 0 ? travelMates.value[0] : '', // 預設代墊人為名單第一位
-              split: [...travelMates.value], // 預設全選
+              payer: travelMates.value.length > 0 ? travelMates.value[0] : '', 
+              split: [...travelMates.value], 
               receiptUrl: res.url
             };
             showExpenseModal.value = true;
@@ -321,7 +310,6 @@ createApp({
       reader.readAsDataURL(file);
     };
 
-    // 💾 儲存記帳資料 (陣列轉字串)
     const submitExpense = async () => {
       if (!newExpense.value.item || !newExpense.value.amount || !newExpense.value.payer || newExpense.value.split.length === 0) {
         alert("請確實填寫消費項目、金額，並選擇代墊與分攤對象");
@@ -329,7 +317,6 @@ createApp({
       }
       isSaving.value = true;
       
-      // 將打勾的陣列用逗號接起來，準備寫入試算表
       const payloadExpense = {
         ...newExpense.value,
         split: newExpense.value.split.join(', ')
@@ -345,7 +332,6 @@ createApp({
         
         if (res.success) {
           showExpenseModal.value = false;
-          // 將最新資料塞到前端顯示
           data.value.expenses.unshift({
             '日期': payloadExpense.date,
             '消費項目': payloadExpense.item,
@@ -680,7 +666,8 @@ createApp({
       isFullscreen, toggleFullscreen, weatherInfo, travelPhrases, globalTranslateUrl, playSpeech,
       currency, exchangeRate, calcInput, calcResult, settlement,
       isSaving, showExpenseModal, newExpense, handleReceiptUpload, submitExpense,
-      aiCameraInput, aiMode, isAiThinking, triggerAiCamera, handleAiUpload, playZhSpeech
+      aiCameraInput, aiMode, isAiThinking, triggerAiCamera, handleAiUpload, playZhSpeech,
+      isAnalyzingReceipt // 防呆變數匯出
     };
   }
 }).mount('#app');
