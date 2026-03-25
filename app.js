@@ -217,6 +217,7 @@ createApp({
       reader.readAsDataURL(file);
     };
 
+    // 這裡是你原本寫的中文朗讀功能
     const playZhSpeech = (text) => {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
@@ -232,6 +233,19 @@ createApp({
         alert('您的瀏覽器不支援語音功能');
       }
     };
+
+    // 👇👇👇 請把這段補上去！這就是導致白畫面的真兇 👇👇👇
+    const playSpeech = (text) => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const msg = new SpeechSynthesisUtterance(text);
+        // 這裡讓瀏覽器自動判斷外語發音
+        window.speechSynthesis.speak(msg);
+      } else {
+        alert('您的瀏覽器不支援語音功能');
+      }
+    };
+    // 👆👆👆 補到這裡 👆👆👆
 
     const checkNavScroll = () => {
       if (!navContainer.value) return;
