@@ -124,7 +124,10 @@
           <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4"><span class="text-2xl font-bold">!</span></div>
           <h2 class="text-xl font-bold text-slate-800 mb-2">載入失敗</h2>
           <p class="text-slate-600 mb-6">{{ error || '找不到行程資料' }}</p>
-          <button @click="handleLogout" class="px-6 py-2.5 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-colors">重新登入</button>
+          <div class="space-y-3">
+            <button v-if="availableTrips.length > 1" @click="handleSwitchTrip" class="w-full px-6 py-2.5 bg-indigo-50 text-indigo-700 font-bold rounded-xl hover:bg-indigo-100 transition-colors">切換其他行程</button>
+            <button @click="handleLogout" class="w-full px-6 py-2.5 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-colors">重新登入</button>
+          </div>
         </div>
       </div>
 
@@ -134,6 +137,7 @@
             
             <div class="hidden md:flex items-center gap-3 font-bold text-xl text-slate-900 mr-8 shrink-0 max-w-[300px]">
               <span class="truncate">{{ basicInfo['專案名稱'] || tripName }}</span>
+              <button v-if="availableTrips.length > 1" @click="handleSwitchTrip" class="text-indigo-400 hover:text-indigo-600 transition-colors bg-indigo-50 p-1.5 rounded-lg border border-indigo-100" title="切換其他行程"><i data-lucide="arrow-left-right" class="w-4 h-4"></i></button>
               <button @click="handleLogout" class="text-slate-400 hover:text-rose-500 transition-colors bg-slate-50 p-1.5 rounded-lg border border-slate-100" title="登出系統"><i data-lucide="log-out" class="w-4 h-4"></i></button>
             </div>
       
@@ -168,13 +172,6 @@
                       </div>
                     </div>
                   </div>
-                </div>
-
-                <div class="flex justify-end mb-4 print:hidden md:hidden">
-                  <button @click="handleLogout" class="flex items-center gap-2 bg-white border border-slate-200 shadow-sm px-4 py-2 rounded-full text-slate-600 hover:text-rose-500 hover:border-rose-200 transition-colors text-sm font-bold">
-                    <i data-lucide="log-out" class="w-4 h-4"></i>
-                    <span>切換行程 / 登出</span>
-                  </button>
                 </div>
 
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 print:hidden">
@@ -222,6 +219,19 @@
                     </div>
                   </div>
                 </div>
+
+                <div class="pt-4 pb-8 space-y-3 print:hidden md:hidden">
+                  <button v-if="availableTrips.length > 1" @click="handleSwitchTrip" class="w-full bg-indigo-50 text-indigo-600 font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-indigo-100 transition-colors shadow-sm">
+                    <i data-lucide="arrow-left-right" class="w-5 h-5"></i>
+                    <span>切換其他行程</span>
+                  </button>
+                  
+                  <button @click="handleLogout" class="w-full bg-slate-100 text-slate-500 font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-rose-50 hover:text-rose-500 transition-colors shadow-sm">
+                    <i data-lucide="log-out" class="w-5 h-5"></i>
+                    <span>登出系統</span>
+                  </button>
+                </div>
+                
               </div>
             </Transition>
 
@@ -334,6 +344,30 @@
                               </div>
                             </div>
                             <div v-if="item['圖片網址']" class="shrink-0 w-full md:w-48 h-32 rounded-xl overflow-hidden bg-slate-100 mt-2 md:mt-0"><img :src="item['圖片網址']" :alt="item['景點/活動名稱']" class="w-full h-full object-cover" referrerpolicy="no-referrer" onerror="this.style.display='none'"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="hidden print:block space-y-12">
+                    <div v-for="day in itineraryDays" :key="'print-'+day" class="break-inside-avoid mb-12">
+                      <h3 class="text-xl font-bold text-slate-800 mb-6 pb-2 border-b-2 border-purple-200">{{ day }} 行程</h3>
+                      <div class="relative pl-4 py-2">
+                        <div class="absolute left-[7px] top-0 bottom-0 w-0.5 bg-slate-200"></div>
+                        <div class="space-y-6">
+                          <div v-for="(item, idx) in groupedItinerary[day]" :key="idx" class="relative pl-8 break-inside-avoid">
+                            <div class="absolute left-[-5px] top-1.5 w-4 h-4 rounded-full bg-purple-500 border-4 border-white"></div>
+                            <div class="bg-white rounded-2xl p-5 border border-slate-200 w-full overflow-hidden">
+                              <div class="flex items-start gap-4 w-full">
+                                <div class="shrink-0 pt-1"><span class="inline-block px-3 py-1 bg-slate-100 text-slate-700 font-bold rounded-lg">{{ item['時間'] }}</span></div>
+                                <div class="flex-grow space-y-2 min-w-0 w-full">
+                                  <h4 class="text-lg font-bold text-slate-800 break-words">{{ item['景點/活動名稱'] }}</h4>
+                                  <div v-if="item['地址']" class="flex items-start gap-2 text-slate-600 text-sm w-full"><i data-lucide="map-pin" class="w-3.5 h-3.5 shrink-0 mt-0.5 text-slate-400"></i><span class="break-words break-all w-full">{{ item['地址'] }}</span></div>
+                                  <div v-if="item['備註說明']" class="text-sm text-slate-600 mt-2 bg-slate-50 p-2 rounded-lg break-words break-all w-full">{{ item['備註說明'] }}</div>
+                                </div>
+                                <div v-if="item['圖片網址']" class="shrink-0 w-32 h-24 rounded-xl overflow-hidden bg-slate-100"><img :src="item['圖片網址']" class="w-full h-full object-cover" referrerpolicy="no-referrer"></div>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>

@@ -51,7 +51,14 @@ createApp({
       { id: 'ai_guide', label: 'AI 導遊', icon: 'sparkles' }
     ];
 
-    const renderIcons = () => { nextTick(() => { if (window.lucide) window.lucide.createIcons(); }); };
+    // 💡 修復 Icon 消失問題：加入微小延遲確保 Vue DOM 已更新
+    const renderIcons = () => { 
+      nextTick(() => { 
+        setTimeout(() => {
+          if (window.lucide) window.lucide.createIcons(); 
+        }, 50);
+      }); 
+    };
 
     // 🚀 共用 Fetch API 呼叫函數
     const callAPI = async (payload) => {
@@ -62,7 +69,7 @@ createApp({
       return await response.json();
     };
 
-    // 🔐 登入邏輯 (支援多行程判斷)
+    // 🔐 登入邏輯 (支援多行程、儲存 7 天記憶)
     const handleLogin = async () => {
       if (!loginUser.value || !loginPass.value) {
         loginError.value = "請輸入帳號與密碼";
@@ -73,15 +80,23 @@ createApp({
       try {
         const res = await callAPI({ action: 'login', user: loginUser.value, pass: loginPass.value });
         if (res.success) {
+          // 💡 寫入 7 天記憶時間戳記
+          localStorage.setItem('travel_login_time', Date.now().toString());
+
+          if (res.trips && res.trips.length > 0) {
+            availableTrips.value = res.trips;
+            // 將擁有的行程清單存入手機，方便之後直接切換
+            localStorage.setItem('travel_trips', JSON.stringify(res.trips));
+          }
+
           if (res.trips && res.trips.length === 1) {
             // 只有一個行程，直接進入
             selectTrip(res.trips[0]);
           } else if (res.trips && res.trips.length > 1) {
             // 有多個行程，打開選擇器介面
-            availableTrips.value = res.trips;
             showTripSelector.value = true;
           } else {
-             // 舊版 API 相容性 (如果後端沒回傳 trips 陣列)
+             // 舊版 API 相容性
              selectTrip({ spreadsheetId: res.spreadsheetId, tripName: res.tripName });
           }
         } else {
@@ -104,10 +119,22 @@ createApp({
       fetchItineraryData();
     };
 
-    // 🚪 登出邏輯
+    // 🔄 切換行程邏輯 (退回大廳，免重新輸入密碼)
+    const handleSwitchTrip = () => {
+      isLoggedIn.value = false;
+      showTripSelector.value = true;
+      const savedTrips = localStorage.getItem('travel_trips');
+      if (savedTrips) {
+        try { availableTrips.value = JSON.parse(savedTrips); } catch(e) {}
+      }
+    };
+
+    // 🚪 徹底登出邏輯 (清空所有記憶)
     const handleLogout = () => {
       localStorage.removeItem('travel_sid');
       localStorage.removeItem('travel_name');
+      localStorage.removeItem('travel_login_time');
+      localStorage.removeItem('travel_trips');
       isLoggedIn.value = false;
       showTripSelector.value = false;
       availableTrips.value = [];
@@ -165,8 +192,6 @@ createApp({
 
           if (res.success) {
             const aiText = res.result;
-            
-            // 儲存至試算表
             await callAPI({
               action: 'saveAiRecord',
               spreadsheetId: spreadsheetId.value,
@@ -385,13 +410,31 @@ createApp({
     
     watch(activeItineraryDay, renderIcons);
 
+    // 💡 當登入狀態改變時，確保圖示重新渲染
+    watch([isLoggedIn, showTripSelector], () => {
+      renderIcons();
+    });
+
     onMounted(() => {
       document.addEventListener('fullscreenchange', () => { isFullscreen.value = !!document.fullscreenElement; renderIcons(); });
       if ('speechSynthesis' in window) window.speechSynthesis.getVoices();
 
-      // 啟動時檢查 LocalStorage 是否已經有登入紀錄
+      const savedTime = localStorage.getItem('travel_login_time');
       const savedSid = localStorage.getItem('travel_sid');
       const savedName = localStorage.getItem('travel_name');
+      const savedTrips = localStorage.getItem('travel_trips');
+
+      // 💡 檢查是否超過 7 天 (7天 = 604,800,000 毫秒)
+      if (savedTime && (Date.now() - parseInt(savedTime)) > 604800000) {
+        handleLogout(); // 登入過期，清除記憶
+        return;
+      }
+
+      if (savedTrips) {
+        try { availableTrips.value = JSON.parse(savedTrips); } catch(e) {}
+      }
+
+      // 啟動時檢查 LocalStorage 是否已經有登入紀錄
       if (savedSid) {
         spreadsheetId.value = savedSid;
         tripName.value = savedName || '';
@@ -632,10 +675,9 @@ createApp({
       return 'https://' + 'translate.google.com/?hl=zh-TW&sl=zh-TW&tl=' + targetLang + '&op=translate';
     });
 
-    // 🚀 回傳所有綁定到畫面的變數與函數 (加上了 showTripSelector, availableTrips, selectTrip)
     return {
       isLoggedIn, loginUser, loginPass, loginLoading, loginError, handleLogin, handleLogout, tripName,
-      showTripSelector, availableTrips, selectTrip,
+      showTripSelector, availableTrips, selectTrip, handleSwitchTrip,
       loading, error, data, activeTab, tabs, basicInfo, coverImage,
       uniqueAddresses, copiedIndex, copyToClipboard, countdownDays,
       itineraryDays, activeItineraryDay, groupedItinerary, currentDayDirectionsUrl,
