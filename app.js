@@ -33,10 +33,12 @@ createApp({
     const showLeftNavHint = ref(false);
     const isFullscreen = ref(false);
     
-    const isAnalyzingReceipt = ref(false);
+    // 💡 記帳相關狀態更新
+    const isUploadingReceipt = ref(false); // 改為上傳照片狀態
     const isSaving = ref(false);
     const showExpenseModal = ref(false);
-    const newExpense = ref({ date: '', item: '', amount: '', currency: '', payer: '', split: '' });
+    // split 改成陣列形式以支援複選，新增 receiptUrl
+    const newExpense = ref({ date: '', item: '', amount: '', currency: '', payer: '', split: [], receiptUrl: '' });
 
     const aiCameraInput = ref(null);
     const aiMode = ref('');
@@ -73,7 +75,7 @@ createApp({
       return await response.json();
     };
 
-    // 🔐 登入邏輯 (支援多行程、儲存 7 天記憶與權限)
+    // 🔐 登入邏輯
     const handleLogin = async () => {
       if (!loginUser.value || !loginPass.value) {
         loginError.value = "請輸入帳號與密碼";
@@ -84,25 +86,20 @@ createApp({
       try {
         const res = await callAPI({ action: 'login', user: loginUser.value, pass: loginPass.value });
         if (res.success) {
-          // 💡 寫入 7 天記憶時間戳記與權限設定
           localStorage.setItem('travel_login_time', Date.now().toString());
           localStorage.setItem('travel_permission', res.permission || 'free'); 
           userPermission.value = res.permission || 'free'; 
 
           if (res.trips && res.trips.length > 0) {
             availableTrips.value = res.trips;
-            // 將擁有的行程清單存入手機，方便之後直接切換
             localStorage.setItem('travel_trips', JSON.stringify(res.trips));
           }
 
           if (res.trips && res.trips.length === 1) {
-            // 只有一個行程，直接進入
             selectTrip(res.trips[0]);
           } else if (res.trips && res.trips.length > 1) {
-            // 有多個行程，打開選擇器介面
             showTripSelector.value = true;
           } else {
-             // 舊版 API 相容性
              selectTrip({ spreadsheetId: res.spreadsheetId, tripName: res.tripName });
           }
         } else {
@@ -114,7 +111,6 @@ createApp({
       loginLoading.value = false;
     };
 
-    // 🎯 選擇行程邏輯
     const selectTrip = (trip) => {
       spreadsheetId.value = trip.spreadsheetId;
       tripName.value = trip.tripName;
@@ -125,7 +121,6 @@ createApp({
       fetchItineraryData();
     };
 
-    // 🔄 切換行程邏輯 (退回大廳，免重新輸入密碼)
     const handleSwitchTrip = () => {
       isLoggedIn.value = false;
       showTripSelector.value = true;
@@ -135,16 +130,15 @@ createApp({
       }
     };
 
-    // 🚪 徹底登出邏輯 (清空所有記憶與權限)
     const handleLogout = () => {
       localStorage.removeItem('travel_sid');
       localStorage.removeItem('travel_name');
       localStorage.removeItem('travel_login_time');
       localStorage.removeItem('travel_trips');
-      localStorage.removeItem('travel_permission'); // 💡 清除權限
+      localStorage.removeItem('travel_permission'); 
       isLoggedIn.value = false;
       showTripSelector.value = false;
-      userPermission.value = 'free'; // 💡 重設為免費版
+      userPermission.value = 'free'; 
       availableTrips.value = [];
       spreadsheetId.value = '';
       tripName.value = '';
@@ -154,7 +148,6 @@ createApp({
       activeTab.value = 'home';
     };
 
-    // 📂 抓取行程表資料
     const fetchItineraryData = async () => {
       loading.value = true;
       try {
@@ -273,76 +266,94 @@ createApp({
       }
     };
 
+    // 💡 基本資訊計算屬性：抓取貨幣、匯率與出遊名單
+    const basicInfo = computed(() => data.value.basicInfo && data.value.basicInfo[0] ? data.value.basicInfo[0] : {});
+    const currency = computed(() => basicInfo.value['當地貨幣'] || '外幣');
+    const exchangeRate = computed(() => Number(basicInfo.value['基準匯率(對台幣)']) || 1);
+
+    // 💡 自動解析同行名單 (支援全形半形逗號切割)
+    const travelMates = computed(() => {
+      const namesStr = basicInfo.value['同行名單(用逗號分隔)'];
+      if (!namesStr) return [];
+      return namesStr.split(/[,，]/).map(n => n.trim()).filter(n => n);
+    });
+
+    // 📸 拍照上傳收據 (取代舊的 AI 辨識)
     const handleReceiptUpload = (event) => {
       const file = event.target.files[0];
       if (!file) return;
-      isAnalyzingReceipt.value = true;
+      isUploadingReceipt.value = true;
+      
       const reader = new FileReader();
       reader.onload = async (e) => {
         const base64String = e.target.result.split(',')[1];
         try {
           const res = await callAPI({
-            action: 'analyzeReceipt',
-            spreadsheetId: spreadsheetId.value,
+            action: 'uploadReceipt',
+            tripName: tripName.value,
             base64Image: base64String
           });
           
-          isAnalyzingReceipt.value = false;
+          isUploadingReceipt.value = false;
           if (res.success) {
-            try {
-              const result = JSON.parse(res.result);
-              if (result.error) {
-                alert("AI 辨識失敗：" + result.error);
-              } else {
-                newExpense.value = {
-                  date: result.date || new Date().toISOString().split('T')[0].replace(/-/g, '/'),
-                  item: result.item || '',
-                  amount: result.amount || '',
-                  currency: result.currency || currency.value,
-                  payer: '',
-                  split: ''
-                };
-                showExpenseModal.value = true;
-                renderIcons();
-              }
-            } catch (err) {
-              alert("資料解析錯誤，請重試");
-            }
+            // 💡 上傳成功，自動帶入日期、幣別與分攤對象預設值
+            const today = new Date();
+            newExpense.value = {
+              date: today.getFullYear() + '/' + String(today.getMonth()+1).padStart(2,'0') + '/' + String(today.getDate()).padStart(2,'0'),
+              item: '',
+              amount: '',
+              currency: currency.value,
+              payer: travelMates.value.length > 0 ? travelMates.value[0] : '', // 預設代墊人為名單第一位
+              split: [...travelMates.value], // 預設全選
+              receiptUrl: res.url
+            };
+            showExpenseModal.value = true;
+            renderIcons();
           } else {
             alert("伺服器錯誤：" + res.error);
           }
         } catch (err) {
-          isAnalyzingReceipt.value = false;
-          alert("伺服器連線失敗：" + err.message);
+          isUploadingReceipt.value = false;
+          alert("上傳連線失敗：" + err.message);
         }
         event.target.value = '';
       };
       reader.readAsDataURL(file);
     };
 
+    // 💾 儲存記帳資料 (陣列轉字串)
     const submitExpense = async () => {
-      if (!newExpense.value.item || !newExpense.value.amount || !newExpense.value.payer) {
-        alert("請至少填寫：消費項目、金額、代墊付款人");
+      if (!newExpense.value.item || !newExpense.value.amount || !newExpense.value.payer || newExpense.value.split.length === 0) {
+        alert("請確實填寫消費項目、金額，並選擇代墊與分攤對象");
         return;
       }
       isSaving.value = true;
+      
+      // 將打勾的陣列用逗號接起來，準備寫入試算表
+      const payloadExpense = {
+        ...newExpense.value,
+        split: newExpense.value.split.join(', ')
+      };
+
       try {
         const res = await callAPI({
           action: 'addExpense',
           spreadsheetId: spreadsheetId.value,
-          expenseData: newExpense.value
+          expenseData: payloadExpense
         });
         isSaving.value = false;
         
         if (res.success) {
           showExpenseModal.value = false;
+          // 將最新資料塞到前端顯示
           data.value.expenses.unshift({
-            '日期': newExpense.value.date,
-            '消費項目': newExpense.value.item,
-            '金額': newExpense.value.amount,
-            '幣別': newExpense.value.currency,
-            '代墊付款人': newExpense.value.payer,
-            '分攤對象(用逗號分隔)': newExpense.value.split
+            '日期': payloadExpense.date,
+            '消費項目': payloadExpense.item,
+            '金額': payloadExpense.amount,
+            '幣別': payloadExpense.currency,
+            '代墊付款人': payloadExpense.payer,
+            '分攤對象(用逗號分隔)': payloadExpense.split,
+            '旅遊收據': payloadExpense.receiptUrl
           });
           alert("記帳成功！");
           renderIcons();
@@ -387,30 +398,6 @@ createApp({
       }
     };
 
-    const playSpeech = (text) => {
-      let targetLangFull = 'en-US';
-      let targetLangShort = 'en';
-      if (isKorea.value) { targetLangFull = 'ko-KR'; targetLangShort = 'ko'; }
-      else if (isJapan.value) { targetLangFull = 'ja-JP'; targetLangShort = 'ja'; }
-      else if (isThailand.value) { targetLangFull = 'th-TH'; targetLangShort = 'th'; }
-      else if (isVietnam.value) { targetLangFull = 'vi-VN'; targetLangShort = 'vi'; }
-
-      if ('speechSynthesis' in window) {
-        const voices = window.speechSynthesis.getVoices();
-        const hasVoice = voices.length === 0 || voices.some(v => v.lang.includes(targetLangShort));
-        if (hasVoice) {
-          window.speechSynthesis.cancel();
-          const msg = new SpeechSynthesisUtterance(text);
-          msg.lang = targetLangFull;
-          msg.rate = 0.85;
-          window.speechSynthesis.speak(msg);
-          return;
-        }
-      }
-      const fallbackUrl = 'https://' + 'translate.google.com/?hl=zh-TW&sl=auto&tl=' + targetLangShort + '&text=' + encodeURIComponent(text) + '&op=translate';
-      window.open(fallbackUrl, '_blank');
-    };
-
     watch(activeTab, (newVal, oldVal) => {
       if (newVal !== oldVal) window.scrollTo({ top: 0, behavior: 'smooth' });
       renderIcons();
@@ -418,7 +405,6 @@ createApp({
     
     watch(activeItineraryDay, renderIcons);
 
-    // 💡 當登入狀態或畫面改變時，重新繪製 Icon
     watch([isLoggedIn, showTripSelector, userPermission], () => {
       renderIcons();
     });
@@ -433,9 +419,8 @@ createApp({
       const savedTrips = localStorage.getItem('travel_trips');
       const savedPermission = localStorage.getItem('travel_permission');
 
-      // 💡 檢查是否超過 7 天 (604,800,000 毫秒)
       if (savedTime && (Date.now() - parseInt(savedTime)) > 604800000) {
-        handleLogout(); // 過期清除記憶
+        handleLogout(); 
         return;
       }
 
@@ -443,12 +428,10 @@ createApp({
         try { availableTrips.value = JSON.parse(savedTrips); } catch(e) {}
       }
 
-      // 💡 讀取使用者的付費狀態
       if (savedPermission) {
         userPermission.value = savedPermission;
       }
 
-      // 啟動時檢查 LocalStorage 是否已經有登入紀錄
       if (savedSid) {
         spreadsheetId.value = savedSid;
         tripName.value = savedName || '';
@@ -461,10 +444,6 @@ createApp({
       window.addEventListener('resize', checkNavScroll);
     });
 
-    const basicInfo = computed(() => data.value.basicInfo && data.value.basicInfo[0] ? data.value.basicInfo[0] : {});
-    const currency = computed(() => basicInfo.value['當地貨幣'] || '外幣');
-    const exchangeRate = computed(() => Number(basicInfo.value['基準匯率(對台幣)']) || 1);
-    
     const isKorea = computed(() => /韓國|南韓|首爾|釜山|濟州|大邱|Korea/i.test(basicInfo.value['旅遊地點'] || ''));
     const isJapan = computed(() => /日本|東京|大阪|京都|北海道|沖繩|Japan/i.test(basicInfo.value['旅遊地點'] || ''));
     const isThailand = computed(() => /泰國|曼谷|清邁|普吉島|芭達雅|Thailand|Bangkok/i.test(basicInfo.value['旅遊地點'] || ''));
@@ -693,14 +672,14 @@ createApp({
     return {
       isLoggedIn, loginUser, loginPass, loginLoading, loginError, handleLogin, handleLogout, tripName,
       showTripSelector, availableTrips, selectTrip, handleSwitchTrip,
-      userPermission, isPremium, // 💡 將付費權限拋給 HTML
+      userPermission, isPremium, travelMates, isUploadingReceipt,
       loading, error, data, activeTab, tabs, basicInfo, coverImage,
       uniqueAddresses, copiedIndex, copyToClipboard, countdownDays,
       itineraryDays, activeItineraryDay, groupedItinerary, currentDayDirectionsUrl,
       getMapSearchUrl, isKorea, navContainer, showNavHint, showLeftNavHint, checkNavScroll, scrollNav, printPage,
       isFullscreen, toggleFullscreen, weatherInfo, travelPhrases, globalTranslateUrl, playSpeech,
       currency, exchangeRate, calcInput, calcResult, settlement,
-      isAnalyzingReceipt, isSaving, showExpenseModal, newExpense, handleReceiptUpload, submitExpense,
+      isSaving, showExpenseModal, newExpense, handleReceiptUpload, submitExpense,
       aiCameraInput, aiMode, isAiThinking, triggerAiCamera, handleAiUpload, playZhSpeech
     };
   }

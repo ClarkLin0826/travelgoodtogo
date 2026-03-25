@@ -94,26 +94,57 @@
         <h2 class="text-2xl font-bold text-white mb-2">Gemini AI 正在看收據...</h2>
       </div>
 
+      <div v-if="isUploadingReceipt" class="fixed inset-0 z-[200] bg-slate-900/90 backdrop-blur-sm flex flex-col items-center justify-center p-4 print:hidden">
+        <i data-lucide="cloud-upload" class="w-16 h-16 text-emerald-400 animate-bounce mb-4"></i>
+        <h2 class="text-2xl font-bold text-white mb-2">收據照片上傳中...</h2>
+        <p class="text-slate-400 text-sm">正在存入您的 Google 雲端硬碟</p>
+      </div>
+
       <div v-if="showExpenseModal" class="fixed inset-0 z-[150] bg-black/60 flex items-center justify-center p-4 print:hidden">
         <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
           <div class="bg-emerald-500 p-4 text-white flex justify-between items-center shrink-0">
-            <h3 class="font-bold text-lg flex items-center gap-2"><i data-lucide="check-circle" class="w-5 h-5"></i> 確認記帳資訊</h3>
+            <h3 class="font-bold text-lg flex items-center gap-2"><i data-lucide="receipt" class="w-5 h-5"></i> 填寫記帳資訊</h3>
             <button @click="showExpenseModal = false" class="text-white/80 hover:text-white"><i data-lucide="x" class="w-6 h-6"></i></button>
           </div>
-          <div class="p-6 overflow-y-auto space-y-4 bg-slate-50">
-            <div><label class="block text-xs font-bold text-slate-500 mb-1">日期</label><input type="text" v-model="newExpense.date" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none"></div>
-            <div><label class="block text-xs font-bold text-slate-500 mb-1">消費項目 (AI已翻譯)</label><input type="text" v-model="newExpense.item" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none"></div>
+          <div class="p-6 overflow-y-auto space-y-5 bg-slate-50">
+            
             <div class="grid grid-cols-2 gap-4">
-              <div><label class="block text-xs font-bold text-slate-500 mb-1">金額</label><input type="number" v-model="newExpense.amount" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-emerald-600"></div>
+              <div><label class="block text-xs font-bold text-slate-500 mb-1">日期</label><input type="text" v-model="newExpense.date" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none"></div>
               <div><label class="block text-xs font-bold text-slate-500 mb-1">幣別</label><input type="text" v-model="newExpense.currency" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none"></div>
             </div>
-            <div><label class="block text-xs font-bold text-slate-500 mb-1">代墊付款人</label><input type="text" v-model="newExpense.payer" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none"></div>
-            <div><label class="block text-xs font-bold text-slate-500 mb-1">分攤對象</label><input type="text" v-model="newExpense.split" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none"></div>
+            
+            <div class="grid grid-cols-[1fr_120px] gap-4">
+              <div><label class="block text-xs font-bold text-slate-500 mb-1">消費項目</label><input type="text" v-model="newExpense.item" placeholder="例如：計程車" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none"></div>
+              <div><label class="block text-xs font-bold text-slate-500 mb-1">金額</label><input type="number" v-model="newExpense.amount" placeholder="0" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-emerald-600"></div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-500 mb-1">代墊付款人 (誰付錢的？)</label>
+              <select v-model="newExpense.payer" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-slate-700 appearance-none">
+                <option disabled value="">請選擇代墊人</option>
+                <option v-for="mate in travelMates" :key="mate" :value="mate">{{ mate }}</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-500 mb-2">分攤對象 (可複選)</label>
+              <div class="flex flex-wrap gap-2">
+                <label v-for="mate in travelMates" :key="'split-'+mate" class="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2.5 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
+                  <input type="checkbox" v-model="newExpense.split" :value="mate" class="w-4 h-4 text-emerald-500 rounded border-slate-300 focus:ring-emerald-500">
+                  <span class="font-bold text-slate-700 text-sm">{{ mate }}</span>
+                </label>
+              </div>
+            </div>
+            
+            <div v-if="newExpense.receiptUrl" class="bg-emerald-50 text-emerald-700 p-3 rounded-xl border border-emerald-100 flex items-center gap-2 text-sm font-bold">
+              <i data-lucide="check-circle" class="w-4 h-4"></i> 收據圖片已成功夾帶
+            </div>
+
           </div>
           <div class="p-4 bg-white border-t border-slate-100 flex gap-3 shrink-0">
             <button @click="showExpenseModal = false" class="flex-1 py-3 font-bold text-slate-500 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors">取消</button>
             <button @click="submitExpense" class="flex-1 py-3 font-bold text-white bg-emerald-500 rounded-xl hover:bg-emerald-600 transition-colors flex justify-center items-center gap-2">
-              <i v-if="isSaving" data-lucide="loader-2" class="w-5 h-5 animate-spin"></i><span>{{ isSaving ? '寫入雲端中...' : '儲存至記帳本' }}</span>
+              <i v-if="isSaving" data-lucide="loader-2" class="w-5 h-5 animate-spin"></i><span>{{ isSaving ? '處理中...' : '儲存至記帳本' }}</span>
             </button>
           </div>
         </div>
