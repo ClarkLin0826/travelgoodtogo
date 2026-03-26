@@ -124,6 +124,39 @@
         <h2 class="text-2xl font-bold text-white mb-3 tracking-widest relative z-10">資料載入中</h2>
       </div>
 
+      <div v-if="showLeaveModal" class="fixed inset-0 z-[200] bg-black/60 flex items-center justify-center p-4 print:hidden backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+          <div class="p-6 text-center">
+            <div class="w-16 h-16 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <i data-lucide="alert-triangle" class="w-8 h-8"></i>
+            </div>
+            <h3 class="font-black text-xl text-slate-800 mb-2">確定要退出此旅程嗎？</h3>
+            
+            <div v-if="currentRole === '主辦人'" class="text-left bg-rose-50 p-4 rounded-xl border border-rose-200 mt-4">
+              <p class="text-rose-600 font-bold text-sm mb-1 flex items-center gap-1">
+                <i data-lucide="alert-circle" class="w-4 h-4"></i> 主辦人刪除警告
+              </p>
+              <p class="text-rose-700 text-xs font-medium leading-relaxed mt-2">
+                您是此行程的主辦人，退出將會<span class="font-black underline text-red-600">永久銷毀</span>雲端硬碟中的試算表檔案！
+              </p>
+              <p class="text-rose-700 text-xs font-medium leading-relaxed mt-2 bg-white/50 p-2 rounded-lg">
+                ⚠️ <span class="font-black">若有其他同行者已加入，他們也將同步失去查看此行程的權限。</span>確定要永久刪除嗎？
+              </p>
+            </div>
+            <div v-else class="text-left bg-slate-50 p-4 rounded-xl border border-slate-200 mt-4">
+              <p class="text-slate-600 text-sm font-medium leading-relaxed">退出後，此行程將從您的清單中移除。但不會影響主辦人與其他同行者的檔案。</p>
+            </div>
+          </div>
+          <div class="p-4 bg-slate-50 border-t border-slate-100 flex gap-3">
+            <button @click="showLeaveModal = false" class="flex-1 py-3 font-bold text-slate-500 bg-white border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors">取消</button>
+            <button @click="confirmLeaveTrip" :disabled="isActionLoading" class="flex-1 py-3 font-bold text-white bg-rose-500 rounded-xl hover:bg-rose-600 transition-colors flex justify-center items-center gap-2">
+              <i v-if="isActionLoading" data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
+              <span>{{ isActionLoading ? '處理中...' : '確定退出' }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div v-if="isUploadingReceipt" class="fixed inset-0 z-[200] bg-slate-900/90 backdrop-blur-sm flex flex-col items-center justify-center p-4 print:hidden">
         <i data-lucide="cloud-upload" class="w-16 h-16 text-emerald-400 animate-bounce mb-4"></i>
         <h2 class="text-2xl font-bold text-white mb-2">收據照片上傳中...</h2>
@@ -180,6 +213,9 @@
           <h2 class="text-xl font-bold text-slate-800 mb-2">載入失敗</h2>
           <p class="text-slate-600 mb-6">{{ error || '找不到行程資料' }}</p>
           <div class="space-y-3">
+            <button @click="handleLeaveTrip" class="w-full px-6 py-2.5 bg-rose-50 text-rose-600 font-bold rounded-xl hover:bg-rose-100 transition-colors flex justify-center items-center gap-2">
+              <i data-lucide="trash-2" class="w-4 h-4"></i> 清除此失效行程
+            </button>
             <button v-if="availableTrips.length > 0" @click="handleSwitchTrip" class="w-full px-6 py-2.5 bg-indigo-50 text-indigo-700 font-bold rounded-xl hover:bg-indigo-100 transition-colors">回控制台</button>
             <button @click="handleLogout" class="w-full px-6 py-2.5 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-colors">重新登入</button>
           </div>
@@ -243,6 +279,9 @@
                      <a :href="'https://docs.google.com/spreadsheets/d/' + spreadsheetId + '/edit'" target="_blank" class="inline-flex justify-center items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-700 shadow-sm transition-all whitespace-nowrap">
                        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> 編輯行程表 (Google Sheet)
                      </a>
+                     <button @click="handleLeaveTrip" class="inline-flex justify-center items-center gap-2 bg-rose-50 text-rose-600 px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-rose-100 shadow-sm transition-all whitespace-nowrap">
+                       <i data-lucide="log-out" class="w-4 h-4"></i> 退出此旅程
+                     </button>
                   </div>
                 </div>
 
@@ -611,7 +650,7 @@
     </div>
   </div>
 
-  <script src="./config.js?v=7" defer></script>
-  <script src="./app.js?v=7" defer></script>
+  <script src="./config.js?v=9" defer></script>
+  <script src="./app.js?v=9" defer></script>
 </body>
 </html>

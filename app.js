@@ -38,6 +38,8 @@ createApp({
     const showLeftNavHint = ref(false);
     const isFullscreen = ref(false);
 
+    const showLeaveModal = ref(false);
+
     const isAnalyzingReceipt = ref(false); 
     const isUploadingReceipt = ref(false); 
     const isSaving = ref(false);
@@ -115,6 +117,7 @@ createApp({
         const res = await callAPI({ action: 'createTrip', user: loginUser.value, tripName: newTripNameInput.value });
         if (res.success) {
           alert(`建立成功！您的邀請碼是：${res.inviteCode}\n系統即將載入您的專屬行程表。`);
+          newTripNameInput.value = ''; 
           selectTrip(res);
         } else { alert(res.error || "建立失敗"); }
       } catch (e) { alert("伺服器錯誤"); }
@@ -128,9 +131,32 @@ createApp({
         const res = await callAPI({ action: 'joinTrip', user: loginUser.value, inviteCode: inviteCodeInput.value });
         if (res.success) {
           alert(`成功加入「${res.tripName}」！\n系統即將載入行程表。`);
+          inviteCodeInput.value = ''; 
           selectTrip(res);
         } else { alert(res.error || "加入失敗"); }
       } catch (e) { alert("伺服器錯誤"); }
+      isActionLoading.value = false;
+    };
+
+    const handleLeaveTrip = () => {
+      showLeaveModal.value = true;
+      nextTick(renderIcons); 
+    };
+
+    const confirmLeaveTrip = async () => {
+      isActionLoading.value = true;
+      try {
+        const res = await callAPI({ action: 'leaveTrip', user: loginUser.value, spreadsheetId: spreadsheetId.value });
+        if (res.success) {
+          showLeaveModal.value = false;
+          alert("已成功退出旅程！");
+          handleSwitchTrip(); 
+        } else {
+          alert(res.error || "退出失敗");
+        }
+      } catch (e) {
+        alert("伺服器錯誤");
+      }
       isActionLoading.value = false;
     };
 
@@ -153,6 +179,11 @@ createApp({
     const handleSwitchTrip = () => {
       isLoggedIn.value = false;
       showTripSelector.value = true;
+      newTripNameInput.value = ''; 
+      inviteCodeInput.value = '';  
+      // 🔥 重點修正：切換回首頁時，強制清空錯誤與舊資料，防止殘影
+      error.value = null; 
+      data.value = { basicInfo: [], flights: [], hotels: [], tickets: [], itinerary: [], expenses: [], notes: [], aiRecords: [] };
       handleLogin();
     };
 
@@ -164,10 +195,16 @@ createApp({
       loginPass.value = '';
       userPermission.value = 'free';
       availableTrips.value = [];
+      newTripNameInput.value = ''; 
+      inviteCodeInput.value = '';  
+      // 🔥 重點修正：登出時也徹底清空錯誤與舊資料
+      error.value = null;
+      data.value = { basicInfo: [], flights: [], hotels: [], tickets: [], itinerary: [], expenses: [], notes: [], aiRecords: [] };
     };
 
     const fetchItineraryData = async () => {
       loading.value = true;
+      error.value = null; // 🔥 重點修正：每次讀取新資料前，清空上一次的錯誤訊息
       try {
         const res = await callAPI({ action: 'getItinerary', spreadsheetId: spreadsheetId.value });
         if (res.success) {
@@ -187,19 +224,17 @@ createApp({
       }
     };
 
-    // 🔥 原生 DOM 喚醒相機，100% 不會失敗
     const triggerReceiptCamera = () => {
       const el = document.getElementById('expenseCamera');
       if (el) el.click();
     };
 
-    // 🔥 原生 DOM 喚醒相機，並傳遞辨識模式
     const triggerAiCamera = (mode) => { 
       aiMode.value = mode; 
       setTimeout(() => {
         const el = document.getElementById('aiCamera');
         if (el) el.click();
-      }, 50); // 給一點緩衝時間確保變數寫入
+      }, 50); 
     };
 
     const handleAiUpload = (event) => {
@@ -215,7 +250,7 @@ createApp({
             const aiText = res.result;
             await callAPI({ action: 'saveAiRecord', spreadsheetId: spreadsheetId.value, mode: aiMode.value, text: aiText });
             isAiThinking.value = false;
-            fetchItineraryData(); // 重新整理抓取最新 AI 紀錄
+            fetchItineraryData(); 
           } else { isAiThinking.value = false; alert("AI 辨識失敗：" + res.error); }
         } catch (err) { isAiThinking.value = false; alert("連線失敗"); }
         event.target.value = '';
@@ -301,7 +336,7 @@ createApp({
         isSaving.value = false;
         if (res.success) {
           showExpenseModal.value = false;
-          fetchItineraryData(); // 重新整理抓最新記帳
+          fetchItineraryData(); 
           alert("記帳成功！");
         } else { alert("寫入失敗"); }
       } catch(err) { isSaving.value = false; alert("連線失敗"); }
@@ -430,14 +465,15 @@ createApp({
     return {
       isLoggedIn, isRegisterMode, loginUser, loginPass, loginLoading, loginError, loginSuccessMsg,
       toggleRegisterMode, handleRegister, handleLogin, handleLogout, 
-      showTripSelector, availableTrips, selectTrip, handleSwitchTrip, handleCreateTrip, handleJoinTrip,
+      showTripSelector, availableTrips, selectTrip, handleSwitchTrip, handleCreateTrip, handleJoinTrip, handleLeaveTrip, confirmLeaveTrip,
+      showLeaveModal, 
       newTripNameInput, inviteCodeInput, isActionLoading, currentRole, currentInviteCode,
       userPermission, isPremium, travelMates, isUploadingReceipt, spreadsheetId, tripName,
       loading, error, data, activeTab, tabs, basicInfo, coverImage, uniqueAddresses, copiedIndex, copyToClipboard, countdownDays,
       itineraryDays, activeItineraryDay, groupedItinerary, getMapSearchUrl, isKorea, navContainer, showNavHint, showLeftNavHint, checkNavScroll, scrollNav, printPage,
       isFullscreen, toggleFullscreen, weatherInfo, playSpeech, playZhSpeech, currency, exchangeRate, calcInput, calcResult, settlement,
       isSaving, showExpenseModal, newExpense, handleReceiptUpload, submitExpense, aiMode, isAiThinking, handleAiUpload, isAnalyzingReceipt,
-      triggerReceiptCamera, triggerAiCamera // 🔥 成功匯出原生 DOM 觸發函數
+      triggerReceiptCamera, triggerAiCamera 
     };
   }
 }).mount('#app');
