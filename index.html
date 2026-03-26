@@ -208,8 +208,8 @@
         <main class="max-w-5xl mx-auto pt-0 md:pt-24 px-4 sm:px-6 lg:px-8 w-full">
           <div class="relative w-full">
 
-            <input type="file" accept="image/*" capture="environment" ref="cameraInput" @change="handleReceiptUpload" class="hidden">
-            <input type="file" accept="image/*" capture="environment" ref="aiCameraInput" @change="handleAiUpload" class="hidden">
+            <input type="file" id="expenseCamera" accept="image/*" capture="environment" @change="handleReceiptUpload" class="hidden">
+            <input type="file" id="aiCamera" accept="image/*" capture="environment" @change="handleAiUpload" class="hidden">
 
             <Transition name="tab">
               <div v-show="activeTab === 'home'" class="space-y-8 pb-12 pt-4 md:pt-0 w-full">
@@ -611,7 +611,7 @@
     </div>
   </div>
 
-  <script src="./config.js?v=6" defer></script>
-  <script src="./app.js?v=6" defer></script>
+  <script src="./config.js?v=7" defer></script>
+  <script src="./app.js?v=7" defer></script>
 </body>
 </html>

@@ -3,13 +3,13 @@ const { createApp, ref, computed, onMounted, nextTick, watch } = Vue;
 createApp({
   setup() {
     const isLoggedIn = ref(false);
-    const isRegisterMode = ref(false); // 新增：控制登入/註冊畫面
+    const isRegisterMode = ref(false);
     
     const loginUser = ref('');
     const loginPass = ref('');
     const loginLoading = ref(false);
     const loginError = ref('');
-    const loginSuccessMsg = ref(''); // 新增：註冊成功的提示
+    const loginSuccessMsg = ref('');
     
     const userPermission = ref('free'); 
     const isPremium = computed(() => userPermission.value === 'premium');
@@ -17,12 +17,10 @@ createApp({
     const showTripSelector = ref(false);
     const availableTrips = ref([]);
     
-    // SaaS 新功能變數
     const newTripNameInput = ref('');
     const inviteCodeInput = ref('');
     const isActionLoading = ref(false);
     
-    // 目前選中的旅程資訊
     const spreadsheetId = ref('');
     const tripName = ref('');
     const currentRole = ref('');
@@ -39,14 +37,13 @@ createApp({
     const showNavHint = ref(false);
     const showLeftNavHint = ref(false);
     const isFullscreen = ref(false);
-    
+
     const isAnalyzingReceipt = ref(false); 
     const isUploadingReceipt = ref(false); 
     const isSaving = ref(false);
     const showExpenseModal = ref(false);
     const newExpense = ref({ date: '', item: '', amount: '', currency: '', payer: '', split: [], receiptUrl: '' });
 
-    const aiCameraInput = ref(null);
     const aiMode = ref('');
     const isAiThinking = ref(false);
 
@@ -97,11 +94,13 @@ createApp({
         if (res.success) {
           localStorage.setItem('travel_login_time', Date.now().toString());
           localStorage.setItem('travel_user', loginUser.value);
+          
           userPermission.value = res.permission || 'free'; 
+          localStorage.setItem('travel_permission', userPermission.value);
 
           availableTrips.value = res.trips || [];
           showTripSelector.value = true;
-          isLoggedIn.value = false; // 停留在選擇畫面
+          isLoggedIn.value = false; 
         } else {
           loginError.value = res.error || "帳號或密碼錯誤";
         }
@@ -154,7 +153,6 @@ createApp({
     const handleSwitchTrip = () => {
       isLoggedIn.value = false;
       showTripSelector.value = true;
-      // 重新呼叫一次 login 以獲取最新清單
       handleLogin();
     };
 
@@ -164,6 +162,7 @@ createApp({
       showTripSelector.value = false;
       loginUser.value = '';
       loginPass.value = '';
+      userPermission.value = 'free';
       availableTrips.value = [];
     };
 
@@ -188,7 +187,20 @@ createApp({
       }
     };
 
-    const triggerAiCamera = (mode) => { aiMode.value = mode; aiCameraInput.value.click(); };
+    // 🔥 原生 DOM 喚醒相機，100% 不會失敗
+    const triggerReceiptCamera = () => {
+      const el = document.getElementById('expenseCamera');
+      if (el) el.click();
+    };
+
+    // 🔥 原生 DOM 喚醒相機，並傳遞辨識模式
+    const triggerAiCamera = (mode) => { 
+      aiMode.value = mode; 
+      setTimeout(() => {
+        const el = document.getElementById('aiCamera');
+        if (el) el.click();
+      }, 50); // 給一點緩衝時間確保變數寫入
+    };
 
     const handleAiUpload = (event) => {
       const file = event.target.files[0];
@@ -331,8 +343,13 @@ createApp({
       const savedTime = localStorage.getItem('travel_login_time');
       const savedSid = localStorage.getItem('travel_sid');
       const savedUser = localStorage.getItem('travel_user');
+      const savedPermission = localStorage.getItem('travel_permission');
 
       if (savedTime && (Date.now() - parseInt(savedTime)) > 604800000) { handleLogout(); return; }
+
+      if (savedPermission) {
+        userPermission.value = savedPermission;
+      }
 
       if (savedSid && savedUser) {
         loginUser.value = savedUser;
@@ -419,7 +436,8 @@ createApp({
       loading, error, data, activeTab, tabs, basicInfo, coverImage, uniqueAddresses, copiedIndex, copyToClipboard, countdownDays,
       itineraryDays, activeItineraryDay, groupedItinerary, getMapSearchUrl, isKorea, navContainer, showNavHint, showLeftNavHint, checkNavScroll, scrollNav, printPage,
       isFullscreen, toggleFullscreen, weatherInfo, playSpeech, playZhSpeech, currency, exchangeRate, calcInput, calcResult, settlement,
-      isSaving, showExpenseModal, newExpense, handleReceiptUpload, submitExpense, aiCameraInput, aiMode, isAiThinking, triggerAiCamera, handleAiUpload, isAnalyzingReceipt
+      isSaving, showExpenseModal, newExpense, handleReceiptUpload, submitExpense, aiMode, isAiThinking, handleAiUpload, isAnalyzingReceipt,
+      triggerReceiptCamera, triggerAiCamera // 🔥 成功匯出原生 DOM 觸發函數
     };
   }
 }).mount('#app');
