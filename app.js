@@ -181,7 +181,6 @@ createApp({
       showTripSelector.value = true;
       newTripNameInput.value = ''; 
       inviteCodeInput.value = '';  
-      // 🔥 重點修正：切換回首頁時，強制清空錯誤與舊資料，防止殘影
       error.value = null; 
       data.value = { basicInfo: [], flights: [], hotels: [], tickets: [], itinerary: [], expenses: [], notes: [], aiRecords: [] };
       handleLogin();
@@ -197,14 +196,13 @@ createApp({
       availableTrips.value = [];
       newTripNameInput.value = ''; 
       inviteCodeInput.value = '';  
-      // 🔥 重點修正：登出時也徹底清空錯誤與舊資料
       error.value = null;
       data.value = { basicInfo: [], flights: [], hotels: [], tickets: [], itinerary: [], expenses: [], notes: [], aiRecords: [] };
     };
 
     const fetchItineraryData = async () => {
       loading.value = true;
-      error.value = null; // 🔥 重點修正：每次讀取新資料前，清空上一次的錯誤訊息
+      error.value = null; 
       try {
         const res = await callAPI({ action: 'getItinerary', spreadsheetId: spreadsheetId.value });
         if (res.success) {
@@ -221,6 +219,25 @@ createApp({
       } catch (err) {
         error.value = '無法連線至伺服器';
         loading.value = false;
+      }
+    };
+
+    // 🔥 新增：強制喚醒手機版 Google Sheets App 的邏輯
+    const openSheetApp = () => {
+      const sid = spreadsheetId.value;
+      if (!sid) return;
+      
+      const webUrl = `https://docs.google.com/spreadsheets/d/${sid}/edit`;
+      const isAndroid = /Android/i.test(navigator.userAgent);
+
+      if (isAndroid) {
+        // 使用 Intent URI 強制喚醒 Android 的 Google Sheets App，若未安裝則退回瀏覽器
+        const fallbackUrl = encodeURIComponent(webUrl);
+        const intentUrl = `intent://docs.google.com/spreadsheets/d/${sid}/edit#Intent;scheme=https;package=com.google.android.apps.docs.editors.sheets;S.browser_fallback_url=${fallbackUrl};end;`;
+        window.location.href = intentUrl;
+      } else {
+        // iOS 或電腦版維持原設定 (iOS 點擊標準連結時，Safari 經常會自動詢問是否開啟 App)
+        window.open(webUrl, '_blank');
       }
     };
 
@@ -473,7 +490,7 @@ createApp({
       itineraryDays, activeItineraryDay, groupedItinerary, getMapSearchUrl, isKorea, navContainer, showNavHint, showLeftNavHint, checkNavScroll, scrollNav, printPage,
       isFullscreen, toggleFullscreen, weatherInfo, playSpeech, playZhSpeech, currency, exchangeRate, calcInput, calcResult, settlement,
       isSaving, showExpenseModal, newExpense, handleReceiptUpload, submitExpense, aiMode, isAiThinking, handleAiUpload, isAnalyzingReceipt,
-      triggerReceiptCamera, triggerAiCamera 
+      triggerReceiptCamera, triggerAiCamera, openSheetApp // 🔥 匯出喚醒 App 函數
     };
   }
 }).mount('#app');
