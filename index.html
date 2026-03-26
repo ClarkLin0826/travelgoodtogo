@@ -19,14 +19,14 @@
 
   <link rel="stylesheet" href="./style.css">
 </head>
-<body class="bg-slate-50 font-sans pb-24 md:pb-12 text-slate-800 overflow-x-hidden">
+<body class="bg-slate-50 font-sans text-slate-800 overflow-x-hidden">
   <div id="app" v-cloak class="overflow-x-hidden w-full max-w-full relative">
     
-    <div v-if="!isLoggedIn" class="min-h-screen bg-slate-900 flex flex-col justify-center items-center p-4 relative overflow-hidden">
+    <div v-if="!isLoggedIn" class="min-h-[100dvh] bg-slate-900 flex flex-col justify-center items-center p-4 relative overflow-hidden">
       <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl"></div>
       <div class="absolute top-1/4 right-1/4 w-64 h-64 bg-emerald-500/20 rounded-full blur-3xl"></div>
       
-      <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative z-10 overflow-hidden border border-slate-200/50">
+      <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 sm:p-8 relative z-10 overflow-hidden border border-slate-200/50">
         <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-purple-500 via-indigo-500 to-emerald-500"></div>
         
         <div v-if="!showTripSelector">
@@ -90,14 +90,14 @@
             <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
               <label class="block text-xs font-bold text-indigo-700 mb-2"><i data-lucide="plus-circle" class="w-4 h-4 inline-block align-text-bottom mr-1"></i>建立新旅程</label>
               <div class="flex gap-2">
-                <input type="text" v-model="newTripNameInput" placeholder="例如：曼谷五日遊" class="flex-grow bg-white border border-indigo-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500">
+                <input type="text" v-model="newTripNameInput" placeholder="例如：曼谷五日遊" class="flex-grow min-w-0 bg-white border border-indigo-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500">
                 <button @click="handleCreateTrip" :disabled="isActionLoading" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-indigo-700 disabled:opacity-50 shrink-0">建立</button>
               </div>
             </div>
             <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
               <label class="block text-xs font-bold text-emerald-700 mb-2"><i data-lucide="users" class="w-4 h-4 inline-block align-text-bottom mr-1"></i>輸入邀請碼加入</label>
               <div class="flex gap-2">
-                <input type="text" v-model="inviteCodeInput" placeholder="輸入6碼邀請碼" class="flex-grow bg-white border border-emerald-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-emerald-500 uppercase">
+                <input type="text" v-model="inviteCodeInput" placeholder="輸入6碼邀請碼" class="flex-grow min-w-0 bg-white border border-emerald-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-emerald-500 uppercase">
                 <button @click="handleJoinTrip" :disabled="isActionLoading" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-emerald-700 disabled:opacity-50 shrink-0">加入</button>
               </div>
             </div>
@@ -111,7 +111,7 @@
       </div>
     </div>
 
-    <div v-else-if="isLoggedIn">
+    <div v-else-if="isLoggedIn" class="pb-24 md:pb-12">
 
       <div v-if="loading" class="fixed inset-0 z-[100] bg-slate-900 flex flex-col items-center justify-center p-4 print:hidden overflow-hidden">
         <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-emerald-500/20 rounded-full blur-3xl"></div>
@@ -207,7 +207,7 @@
         </div>
       </div>
 
-      <div v-if="!loading && (error || !data.basicInfo || !data.basicInfo.length)" class="min-h-screen flex flex-col items-center justify-center p-4 print:hidden">
+      <div v-if="!loading && (error || !data.basicInfo || !data.basicInfo.length)" class="min-h-[80vh] flex flex-col items-center justify-center p-4 print:hidden">
         <div class="bg-white p-8 rounded-2xl shadow-sm border border-red-100 text-center max-w-md">
           <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4"><span class="text-2xl font-bold">!</span></div>
           <h2 class="text-xl font-bold text-slate-800 mb-2">載入失敗</h2>
@@ -276,10 +276,15 @@
                        <span class="font-mono font-black text-slate-800 tracking-widest text-lg">{{ currentInviteCode }}</span>
                        <button @click="copyToClipboard(currentInviteCode, 'invite')" class="text-indigo-600 hover:text-indigo-800 p-1 bg-white rounded-md border border-slate-200 shadow-sm shrink-0" title="複製邀請碼"><i data-lucide="copy" class="w-4 h-4"></i></button>
                      </div>
-                     <a :href="'https://docs.google.com/spreadsheets/d/' + spreadsheetId + '/edit'" target="_blank" class="inline-flex justify-center items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-700 shadow-sm transition-all whitespace-nowrap">
-                       <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> 編輯行程表 (Google Sheet)
-                     </a>
-                     <button @click="handleLeaveTrip" class="inline-flex justify-center items-center gap-2 bg-rose-50 text-rose-600 px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-rose-100 shadow-sm transition-all whitespace-nowrap">
+                     
+                     <div class="flex flex-col gap-1.5 w-full sm:w-auto items-center">
+                         <a :href="'https://docs.google.com/spreadsheets/d/' + spreadsheetId + '/edit?usp=drivesdk'" target="_blank" class="w-full inline-flex justify-center items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-700 shadow-sm transition-all whitespace-nowrap">
+                           <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> 編輯行程表 (Google Sheet)
+                         </a>
+                         <span class="text-[10px] text-indigo-400 font-medium whitespace-nowrap">💡 手機版建議點選「鉛筆」使用 App 開啟</span>
+                     </div>
+                     
+                     <button @click="handleLeaveTrip" class="inline-flex justify-center items-center gap-2 bg-rose-50 text-rose-600 px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-rose-100 shadow-sm transition-all whitespace-nowrap self-start sm:self-auto w-full sm:w-auto mt-2 sm:mt-0">
                        <i data-lucide="log-out" class="w-4 h-4"></i> 退出此旅程
                      </button>
                   </div>
@@ -650,7 +655,7 @@
     </div>
   </div>
 
-  <script src="./config.js?v=9" defer></script>
-  <script src="./app.js?v=9" defer></script>
+  <script src="./config.js?v=10" defer></script>
+  <script src="./app.js?v=10" defer></script>
 </body>
 </html>
